@@ -126,8 +126,17 @@ dans [docs/plaque.md](docs/plaque.md).
 320 px) ne sont que des tests de chaîne : ils prouvent que le code
 fonctionne, pas que les modèles sont bons.
 
+Le projet est sur GitHub : <https://github.com/othmanedhilou/MODELE>
+
+Ouvrez [notebooks/entrainement_colab.ipynb](notebooks/entrainement_colab.ipynb)
+dans Colab, activez le GPU (*Exécution → Modifier le type d'exécution →
+GPU T4*), puis *Exécution → Tout exécuter*. **Il n'y a rien à téléverser** :
+le notebook clone le dépôt et régénère les datasets sur place.
+
+Si vous préférez ne rien passer par GitHub :
+
 ```bash
-python scripts/preparer_envoi.py     # archive de 0,5 Mo, prête à téléverser
+python scripts/preparer_envoi.py     # archive de 0,5 Mo, à déposer dans Drive
 ```
 
 L'archive **exclut les images synthétiques** : elles se régénèrent en une
