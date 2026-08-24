@@ -499,6 +499,18 @@ images annoter — est outillée :
 python scripts/collecter_pour_reannotation.py --source runs/alarmes --nombre 100
 ```
 
+Et si le service maintenance tient un registre d'interventions, il fournit
+le seul retour automatique que l'usine produise :
+
+```bash
+python scripts/confronter_maintenance.py --maintenance maintenance.csv
+```
+
+Il estime la précision et le rappel **en exploitation**, et surtout il
+identifie les **détections manquées** — une réparation sans alarme
+préalable est un défaut que le système n'a pas vu. C'est la seule façon de
+mesurer le rappel en production.
+
 Il classe les images par utilité, le signal le plus fort étant le
 **désaccord entre la vision classique et le modèle entraîné** : quand deux
 méthodes indépendantes divergent, l'une se trompe, et c'est là que

@@ -197,3 +197,83 @@ classique, ce qui n'apporterait rien.
 Il ne reste donc qu'à relire les images sélectionnées et à relancer
 l'entraînement. En pratique, une demi-journée par mois suffit à faire
 progresser un modèle déployé.
+
+---
+
+## 7. Pourquoi l'apprentissage par renforcement ne s'applique pas
+
+La question revient naturellement : pourquoi ne pas laisser le modèle
+apprendre seul, par renforcement, comme un agent qui s'améliore à l'usage ?
+
+Deux raisons de fond, indépendantes des moyens disponibles.
+
+### Il n'y a pas de récompense
+
+L'apprentissage par renforcement suppose qu'après chaque action,
+l'environnement renvoie une **récompense** indiquant si elle était bonne.
+C'est ce signal qui remplace l'annotation humaine.
+
+Ici, il n'existe pas. Quand le modèle annonce une déchirure, rien dans
+l'image suivante ne confirme ni n'infirme. La bande ne répond pas. Le seul
+juge est un humain qui va voir.
+
+Autrement dit : **la récompense, c'est l'annotation**. Le renforcement ne
+supprime pas la boucle humaine, il la renomme.
+
+### Ce n'est pas un problème séquentiel
+
+Le renforcement s'applique aux problèmes où une action **change l'état** du
+monde et influence les décisions suivantes — un robot qui se déplace, une
+partie de jeu, une politique de maintenance.
+
+La détection ne fonctionne pas ainsi : une image entre, une réponse sort,
+et déclarer une déchirure ne modifie pas l'image suivante. C'est de la
+perception supervisée. Y appliquer le renforcement serait une erreur de
+catégorie, pas seulement un choix coûteux.
+
+### Ce qui, en revanche, apprend sans annotation
+
+Deux approches méritent d'être connues, et l'une est déjà prévue :
+
+- **Détection d'anomalie non supervisée** (PatchCore, voir
+  [convoyeur_phase2.md](convoyeur_phase2.md)). On entraîne **uniquement sur
+  de la bande saine**, dont vous avez des heures, et le modèle signale tout
+  écart. Aucune annotation de défaut n'est nécessaire. C'est ce qui se
+  rapproche le plus de l'intuition « il apprend tout seul ».
+- **Pré-entraînement auto-supervisé** sur des images non annotées. Le
+  modèle apprend la structure visuelle d'une bande, pas ce qu'est un
+  défaut : il faut toujours des étiquettes pour la tête de détection.
+
+### Et le seul vrai signal de retour de l'usine
+
+Il existe pourtant un retour automatique, produit par l'usine sans travail
+supplémentaire : le **registre de maintenance**. Si une bande a été réparée
+le 12 mars, une alarme du 11 mars était probablement vraie ; une semaine
+sans intervention après une alarme la rend douteuse.
+
+```bash
+python scripts/confronter_maintenance.py --maintenance maintenance.csv \
+       --exporter data/a_annoter_confirmees
+```
+
+Le script en tire trois choses que rien d'autre ne donne :
+
+| Sortie | Intérêt |
+|---|---|
+| **Précision estimée** | Part des alarmes suivies d'une réparation — mesurée sur vos installations, pas sur un lot de test |
+| **Rappel estimé** | Part des réparations précédées d'une alarme |
+| **Détections manquées** | Une réparation sans alarme préalable est un défaut que le système n'a pas vu. **C'est la seule façon de mesurer le rappel en exploitation** |
+
+Chaque détection manquée désigne des enregistrements précis à récupérer :
+ce sont les images les plus précieuses du projet, puisqu'elles contiennent
+un défaut réel que le modèle actuel ne voit pas.
+
+L'appariement est **un pour un** : une réparation ne confirme qu'une alarme,
+la plus proche. Sans cette contrainte, la précision afficherait 100 % dès
+que les interventions sont fréquentes — on mesurerait la densité du planning
+de maintenance, pas la qualité du modèle. Mesuré sur un jeu d'essai :
+57 % de précision avec l'appariement un pour un, contre 100 % sans.
+
+C'est une supervision **faible, différée et imparfaite**. Ce n'est pas du
+renforcement, et les chiffres sont à lire comme des tendances. Mais c'est
+gratuit, et un rappel qui chute d'un mois sur l'autre est un signal fiable.
