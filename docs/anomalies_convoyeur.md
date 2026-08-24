@@ -122,3 +122,54 @@ Les fissures de [BeltCrack](https://github.com/UESTC-nnLab/BeltCrack) sont
 donc apprises comme `fissure` — ni confondues avec une déchirure, ni
 écartées. Elles entrent au journal, leur évolution est suivie, et elles ne
 déclenchent pas l'arrêt de la ligne.
+
+
+---
+
+## Le dataset n'est pas le facteur decisif : la camera l'est
+
+Question legitime : quel jeu de donnees donnera de vrais resultats sur les
+videos de l'usine ? La reponse honnete est qu'**aucun dataset ne repond a
+cette question**, parce que le facteur limitant est ailleurs.
+
+```bash
+python scripts/tester_resolution_convoyeur.py --video data/raw/convoyeur.mp4        --largeur-bande-mm 1200
+```
+
+Le script mesure trois grandeurs sur **vos** images, par ordre d'importance :
+
+| Grandeur | Ce qu'elle décide |
+|---|---|
+| **Résolution** (mm/pixel) | Une déchirure de 5 mm vue sur une bande de 150 px fait 0,6 pixel : elle n'existe pas dans l'image |
+| **Flou de mouvement** | Le plus sous-estimé. Une bande défile à 2–4 m/s ; une caméra qui expose 1/30 s étale le défaut sur plusieurs centimètres |
+| **Contraste** | La carcasse exposée doit ressortir du caoutchouc, malgré la poussière et la compression du flux |
+
+### Pourquoi le flou de mouvement compte tant
+
+C'est la différence entre une caméra de vidéosurveillance et une caméra
+d'inspection industrielle. Les installations de détection de déchirure
+utilisent des vitesses d'obturation élevées, voire des caméras linéaires,
+précisément parce qu'une bande en mouvement efface les défauts fins sur une
+exposition ordinaire.
+
+Le script mesure ce flou de façon indépendante de la netteté générale : il
+compare l'énergie de gradient **dans** le sens de défilement à celle
+mesurée perpendiculairement. Sur une image nette les deux se valent ; si la
+bande a bougé pendant l'exposition, la composante longitudinale s'effondre.
+
+### Ce que dit le classement des datasets
+
+| Source | Réalisme | Limite |
+|---|---|---|
+| Génération synthétique (`generer_dataset_convoyeur.py`) | faible | Le modèle apprend le rendu, pas le défaut |
+| [BeltCrack](https://github.com/UESTC-nnLab/BeltCrack), 23 732 images réelles | élevé | Vues rapprochées, souvent dessus/dessous : la géométrie de prise de vue peut ne pas correspondre à vos caméras |
+| Incrustation sur **vos** images (`generer_dechirures_sur_reel.py`) | très élevé | Le défaut reste dessiné |
+| **Vos vraies déchirures** (chute de bande, incidents passés) | maximal | Rares, à collecter activement |
+
+L'ordre de préférence est clair, mais il ne se joue qu'**après** le test de
+résolution. Si la caméra ne résout pas le défaut, le meilleur dataset du
+monde produira un modèle qui n'apprend rien d'utilisable.
+
+C'est la même leçon que pour la lecture de plaque, et elle vaut d'être
+écrite dans le rapport : en vision industrielle, la question de
+l'acquisition passe avant celle du modèle.

@@ -389,6 +389,17 @@ vérités. Trois choses sont à mesurer sur place — voir
 
 ---
 
+### Avant tout : votre caméra voit-elle les défauts ?
+
+```bash
+python scripts/tester_resolution_convoyeur.py --video data/raw/convoyeur.mp4        --largeur-bande-mm 1200
+```
+
+Le facteur limitant n'est presque jamais le modèle ni le jeu de données,
+c'est ce que la caméra résout physiquement : résolution en mm/pixel, **flou
+de mouvement** (une bande défile à 2–4 m/s), et contraste. Le script les
+mesure sur vos images et rend un verdict.
+
 ## Anomalies du convoyeur : tout détecter, réagir selon la gravité
 
 Les dix classes d'anomalies sont détectées et journalisées. Aucune n'est
