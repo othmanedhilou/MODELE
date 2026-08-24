@@ -489,6 +489,21 @@ Le pipeline ne charge que `models/<modele>/production.pt`, promu
 explicitement. Un entraînement en cours dans `runs/` ne peut donc pas
 basculer en production par accident.
 
+**Le modèle ne s'améliore pas tout seul en production** : YOLO n'apprend
+rien de ce qu'il voit, et le réentraîner automatiquement sur ses propres
+sorties lui ferait apprendre ses erreurs. La boucle d'amélioration passe par
+une relecture humaine, mais l'étape la plus coûteuse — choisir quelles
+images annoter — est outillée :
+
+```bash
+python scripts/collecter_pour_reannotation.py --source runs/alarmes --nombre 100
+```
+
+Il classe les images par utilité, le signal le plus fort étant le
+**désaccord entre la vision classique et le modèle entraîné** : quand deux
+méthodes indépendantes divergent, l'une se trompe, et c'est là que
+l'annotation humaine rapporte le plus.
+
 La surveillance analyse le journal d'alarmes et signale trois défaillances
 qu'un modèle déployé ne signale jamais lui-même : la **dérive** du taux
 d'alarme, le **silence** d'une caméra (presque toujours un flux coupé, pas

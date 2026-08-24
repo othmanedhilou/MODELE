@@ -129,3 +129,71 @@ et le mentionner dans le rapport montre que le périmètre est un choix :
   humaine → entraînement → promotion explicite.
 - **Conteneurisation** : utile pour le déploiement final sur le serveur de
   l'usine, pas pendant la phase de mise au point.
+
+---
+
+## 6. Le modèle ne s'améliore pas tout seul
+
+C'est le malentendu le plus fréquent sur les systèmes de vision déployés,
+et il vaut la peine d'être écrit noir sur blanc.
+
+**Un modèle YOLO n'apprend rien de ce qu'il voit en production.** Il applique
+ce qu'il a appris à l'entraînement et n'en garde aucune trace. Mettre le
+système en service pendant six mois ne le rendra pas meilleur d'un iota.
+
+Et il ne faut **surtout pas** le réentraîner automatiquement sur ses propres
+sorties. Une fausse alarme réinjectée comme vérité terrain devient une règle
+apprise ; elle se reproduit alors plus souvent, elle est réapprise, et la
+dérive s'installe. Le piège est que les métriques internes du modèle
+**s'améliorent** pendant que ses résultats réels se dégradent : il devient
+de plus en plus sûr de ses erreurs.
+
+### La boucle qui fonctionne
+
+```
+production  ->  collecte des cas UTILES  ->  correction humaine
+            ->  reentrainement  ->  evaluation  ->  promotion explicite
+```
+
+Une seule étape est humaine, et elle est irremplaçable. Les autres sont
+outillées.
+
+### Choisir quelles images annoter
+
+C'est l'étape qui coûte le plus de temps, et celle où l'on en gagne le plus.
+Annoter 500 images de bande saine tirées au hasard n'apporte rien ; annoter
+50 images bien choisies change le modèle.
+
+```bash
+python scripts/collecter_pour_reannotation.py --source runs/alarmes --nombre 100
+```
+
+Trois signaux, du plus fort au plus faible :
+
+1. **Désaccord entre la couche A (vision classique) et la couche B (YOLO).**
+   Quand deux méthodes indépendantes ne disent pas la même chose, l'une des
+   deux se trompe — et c'est précisément là que l'annotation humaine
+   tranche. C'est le signal le plus rentable du projet, et il ne coûte rien
+   puisque les deux couches tournent déjà.
+2. **Confiance faible.** Une détection à 0,30 est une hésitation.
+3. **Classe rare.** Une `jonction_defectueuse` vaut plus qu'une millième
+   `dechirure` : le modèle en a vu peu.
+
+Le script exporte les images retenues avec des **pré-annotations** issues de
+la couche A, dans un dossier prêt à ouvrir dans CVAT ou LabelImg. Ces
+pré-annotations sont une aide à la saisie, pas une vérité : les entraîner
+sans relecture reviendrait à apprendre au modèle les erreurs de la vision
+classique, ce qui n'apporterait rien.
+
+### Ce qui est déjà automatique
+
+- le pipeline **enregistre une capture** de chaque alarme, avec son type,
+  sa gravité et sa taille en millimètres ;
+- `src/mlops/surveiller.py` **signale la dérive**, le silence d'une caméra
+  et les rafales ;
+- le registre **trace** quelle version du dataset a produit quel modèle ;
+- la promotion **refuse** un modèle incohérent avec les classes déclarées.
+
+Il ne reste donc qu'à relire les images sélectionnées et à relancer
+l'entraînement. En pratique, une demi-journée par mois suffit à faire
+progresser un modèle déployé.

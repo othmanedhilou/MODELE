@@ -40,8 +40,8 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from src.utils.common import (lire_image, masque_polygone,  # noqa: E402
-                              polygone_en_pixels)
+from src.utils.common import (RACINE, lire_image,  # noqa: E402
+                              masque_polygone, polygone_en_pixels)
 
 
 class DetecteurDechirureCV:
