@@ -1,0 +1,68 @@
+# Correspondance BeltCrack -> classes du projet.
+#
+# BeltCrack : 23 732 images REELLES de bande transporteuse industrielle,
+# publie avec l'article Pattern Recognition 2026, licence Apache 2.0.
+#   Telechargement : https://doi.org/10.57760/sciencedb.31181
+#   Mot de passe d'extraction : cv205
+#   Code et description : https://github.com/UESTC-nnLab/BeltCrack
+#
+# TOUTE ANOMALIE EST PRISE EN COMPTE.
+# BeltCrack annote des FISSURES (crack). Le projet possede desormais une
+# classe 'fissure' distincte de 'dechirure' : les fissures sont donc
+# apprises et detectees comme telles, sans etre confondues avec une
+# dechirure ni ignorees.
+#
+# La difference n'est pas dans la detection - les deux sont detectees -
+# mais dans la GRAVITE de l'alarme, definie dans configs/convoyeur.yaml :
+#   fissure   : plancher 'info', plafond 'majeure'  -> consigner et suivre
+#   dechirure : plancher 'majeure', plafond 'critique' -> arret machine
+#
+# C'est ce qui permet de tout detecter sans noyer l'operateur : une fissure
+# naissante entre au journal et son evolution est suivie, sans declencher
+# l'arret de la ligne.
+#
+# Usage recommande : pre-entrainer sur BeltCrack, puis affiner sur vos
+# propres images de dechirure. Le gain vient du pre-entrainement sur des
+# textures de caoutchouc REELLES, ce qu'aucune generation synthetique ne
+# donne.
+#
+# Verifiez les noms de classes reels avec :
+#   python -m src.prepare.importer_voc --source <dossier> --inspecter
+
+correspondance:
+  # Noms rencontres dans les datasets de fissure de bande. Adaptez d'apres
+  # ce que renvoie --inspecter : ils varient selon la version.
+  crack: fissure
+  Crack: fissure
+  beltcrack: fissure
+  belt_crack: fissure
+  small_crack: fissure
+  large_crack: fissure
+  crack_large: fissure
+
+  # Si le dataset distingue d'autres anomalies, elles ont toutes leur classe
+  # dans le projet : rien n'est mis a null sans raison.
+  tear: dechirure
+  rip: dechirure
+  hole: perforation
+  puncture: perforation
+  wear: usure_surface
+  abrasion: usure_surface
+  splice: jonction_defectueuse
+  joint: jonction_defectueuse
+  blister: cloque
+  delamination: cloque
+  edge_damage: bord_effiloche
+  frayed: bord_effiloche
+  foreign_object: corps_etranger
+  spillage: deversement
+  misalignment: desalignement
+  deviation: desalignement
+
+  # Seules les classes qui ne sont PAS des anomalies sont ignorees :
+  # la bande elle-meme, le fond, les rouleaux sains, les personnes.
+  belt: null
+  background: null
+  roller: null
+  conveyor: null
+  person: null

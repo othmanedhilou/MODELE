@@ -1,0 +1,43 @@
+# =====================================================================
+# PIPELINE TEMPS REEL - orchestration multi-cameras / multi-modeles
+# =====================================================================
+
+sorties:
+  dossier_alarmes: runs/alarmes
+  journal: runs/alarmes/journal.jsonl
+  sauver_snapshot: true
+  afficher_fenetre: true       # false sur un serveur sans ecran
+
+cameras:
+  - nom: cam_portail
+    source: 0                  # 0 = webcam locale (test) | "rtsp://user:pass@ip:554/..."
+    modeles: [vehicules, plaque]
+    fps_analyse: 10            # inutile et couteux d'analyser les 25 fps
+    # 'plaque' exige 'vehicules' : la plaque n'est cherchee que dans la boite
+    # d'un vehicule detecte. Lancez d'abord
+    #   python scripts/tester_lisibilite_plaque.py --video <votre_video>
+    # pour savoir si la resolution de cette camera permet la lecture.
+
+  - nom: cam_parc_nuit
+    source: "rtsp://CHANGER_IP:554/Streaming/Channels/101"
+    modeles: [eclairage, vehicules]
+    fps_analyse: 2
+
+  - nom: cam_convoyeur_01
+    source: "rtsp://CHANGER_IP:554/Streaming/Channels/201"
+    modeles: [convoyeur]
+    fps_analyse: 15            # defaut critique -> cadence elevee
+
+# Poids utilises en production. A renseigner apres entrainement.
+poids:
+  plaque: runs/plaque/train/weights/best.pt
+  eclairage: runs/eclairage/train/weights/best.pt
+  vehicules: runs/vehicules/train/weights/best.pt
+  convoyeur: runs/convoyeur/train/weights/best.pt
+
+# Repli : si les poids n'existent pas encore, on utilise ces solutions de
+# depart pour que le pipeline tourne quand meme des aujourd'hui.
+repli:
+  vehicules: yolo11s.pt        # COCO connait deja car / truck / bus
+  convoyeur: cv                # couche A classique, sans apprentissage
+  eclairage: photometrie       # zones + luminance, sans detection de luminaire

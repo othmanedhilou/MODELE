@@ -1,0 +1,66 @@
+# Correspondance des classes d'un dataset public de convoyeur vers celles
+# du projet (configs/data_convoyeur.yaml).
+#
+# ATTENTION AU FORMAT D'ANNOTATION
+# Notre modele convoyeur est un modele de SEGMENTATION : il attend des
+# polygones. Beaucoup de datasets publics ne fournissent que des boites.
+#   - dataset en boites      -> passez tache: detect dans configs/convoyeur.yaml
+#                               et modele_base: yolo11s.pt
+#   - dataset en segmentation -> rien a changer
+# check_dataset signale le probleme si vous vous trompez.
+#
+# Les noms de gauche sont ceux rencontres dans les datasets publics de
+# convoyeur. Verifiez-les avec --inspecter : ils varient d'un export a l'autre.
+
+correspondance:
+  # --- Dechirures : la classe prioritaire ---
+  tear: dechirure
+  Large Tear: dechirure
+  Small Tear: dechirure
+  Roller Tear: dechirure
+  longitudinal tear: dechirure
+  rip: dechirure
+  crack: dechirure
+
+  # --- Trous et perforations ---
+  hole: perforation
+  Hole: perforation
+  Large Hole: perforation
+  Small Hole: perforation
+  Puncture: perforation
+  puncture: perforation
+
+  # --- Bords abimes ---
+  edge damage: bord_effiloche
+  frayed edge: bord_effiloche
+
+  # --- Objets sur la bande (cause frequente de dechirure) ---
+  foreign object: corps_etranger
+  Other Objects: corps_etranger
+  rock: corps_etranger
+  bolt: corps_etranger
+  metal: corps_etranger
+
+  # --- Mauvais centrage / deversement ---
+  misalignment: desalignement
+  deviation: desalignement
+  spillage: deversement
+
+  # --- Classes a IGNORER ---
+  # 'Belt Joint' est une jonction NORMALE de bande. Elle ressemble beaucoup a
+  # une dechirure sur l'image, mais ce n'est pas un defaut : l'apprendre comme
+  # tel produirait une alarme a chaque tour de bande.
+  Belt Joint: null
+  belt joint: null
+  splice: null
+  # La bande elle-meme et les personnes ne sont pas des defauts.
+  Conveyor: null
+  conveyor: null
+  belt: null
+  Human: null
+  person: null
+  # 'impact damage' et 'patch work' sont des degradations reelles mais d'une
+  # autre nature (usure, reparation). A activer seulement si vous decidez de
+  # les surveiller, apres avoir ajoute les classes dans data_convoyeur.yaml.
+  impact damage: null
+  patch work: null

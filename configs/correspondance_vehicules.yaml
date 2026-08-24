@@ -1,0 +1,40 @@
+# Correspondance des classes d'un dataset public vers celles du projet.
+#
+# Generez le squelette avec :
+#   python -m src.prepare.importer_dataset --source <dossier> --inspecter
+#
+# A gauche : le nom EXACT de la classe dans le dataset telecharge.
+# A droite : une classe de configs/data_vehicules.yaml, ou `null` pour
+#            ignorer la classe (ses annotations seront supprimees).
+#
+# Regle de decision : mieux vaut `null` qu'une correspondance approximative.
+# Une classe mal mappee produit un modele qui confond systematiquement deux
+# engins, et aucune metrique ne vous le signalera.
+#
+# Cet exemple correspond a un export type "construction vehicles" de
+# Roboflow Universe. Adaptez les noms de gauche a VOTRE export.
+
+correspondance:
+  car: voiture
+  truck: camion_benne
+  dump truck: camion_benne
+  cement mixer: camion_citerne
+  cement truck: camion_citerne
+  tanker: camion_citerne
+  van: camion_leger
+  bus: bus_navette
+  wheel loader: chargeuse
+  loader: chargeuse
+  forklift: chariot_elevateur
+  bulldozer: bulldozer
+  dozer: bulldozer
+  excavator: excavatrice
+  trailer: citerne_remorque
+
+  # Classes presentes dans beaucoup de datasets publics mais hors perimetre.
+  # `null` = ignoree. Les personnes sont deja couvertes par le modele
+  # gilet/casque de vos camarades : les melanger ici degraderait les deux.
+  person: null
+  crane: null
+  roller: null
+  motorcycle: null

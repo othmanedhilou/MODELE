@@ -1,0 +1,93 @@
+# =====================================================================
+# MODULE PLAQUE D'IMMATRICULATION (ANPR)
+#
+# Chaine a trois etages : vehicule -> plaque -> caracteres.
+# Elle se greffe sur le modele 2 (vehicules) : on ne cherche une plaque
+# QUE dans la boite d'un vehicule detecte, ce qui divise par vingt le
+# nombre de faux positifs par rapport a une recherche sur l'image entiere.
+#
+# AVERTISSEMENT JURIDIQUE
+# Une immatriculation est une donnee a caractere personnel. Compter des
+# camions ne pose pas de difficulte ; enregistrer et conserver des
+# immatriculations releve de la loi 09-08. Faites valider par votre
+# encadrant : finalite, duree de conservation, personnes ayant acces.
+# Le parametre 'anonymiser' ci-dessous permet de flouter les plaques au
+# lieu de les lire, si l'entreprise ne veut pas les conserver.
+# =====================================================================
+
+nom: plaque
+actif: true
+anonymiser: false            # true = flouter la plaque au lieu de la lire
+
+# --- Etage 1 : localisation de la plaque ---
+localisation:
+  # Poids YOLO dedies a la plaque (optionnel). Sans eux, on utilise la
+  # localisation par vision classique decrite plus bas, qui fonctionne
+  # correctement sur des plaques bien contrastees et de face.
+  poids: models/plaque/production.pt
+
+  # La plaque est cherchee dans la partie basse du vehicule uniquement :
+  # une plaque avant se situe entre 45 et 100 pourcent de la hauteur de la
+  # boite. Cela ecarte les logos, pare-brise et inscriptions de portiere.
+  bande_verticale: [0.40, 1.00]
+
+  # Filtres de forme d'un candidat plaque
+  ratio_min: 1.8             # largeur / hauteur, plaque marocaine longue
+  ratio_max: 6.5
+  largeur_min_px: 40         # en dessous, meme la detection est hasardeuse
+  aire_min_ratio: 0.002      # par rapport a l'aire du vehicule
+  aire_max_ratio: 0.25
+
+# --- Etage 2 : lecture des caracteres ---
+lecture:
+  moteur: auto               # auto | easyocr | tesseract | aucun
+  langues: [ar, fr]          # plaques marocaines : chiffres latins + lettre arabe
+  confiance_min: 0.35
+  # Nombre de lectures concordantes exigees avant de valider une plaque.
+  # Une plaque lue une seule fois est presque toujours fausse.
+  lectures_concordantes: 2
+
+# --- Qualite d'image : le facteur decisif ---
+# La lecture de plaque n'est pas un probleme de modele mais de pixels.
+# En dessous de ~100 px de largeur de plaque, aucun modele ne lit de
+# maniere fiable. Utilisez scripts/tester_lisibilite_plaque.py AVANT
+# d'investir du temps sur ce module.
+qualite:
+  largeur_illisible_px: 80   # en dessous : lecture impossible
+  largeur_limite_px: 120     # entre les deux : lecture partielle
+  largeur_bonne_px: 160      # au dela : lecture fiable
+  # Nettete : variance du laplacien mesuree APRES remise a l'echelle de la
+  # plaque a 200 px de large, ce qui rend la valeur comparable d'une
+  # distance a l'autre. A CALIBRER sur vos images : relevez la valeur sur
+  # une plaque nette et sur une plaque floue, placez le seuil au milieu.
+  # Le script tester_lisibilite_plaque.py affiche ces valeurs.
+  nettete_min: 300.0
+
+# --- Selection de la meilleure image du passage ---
+# Un vehicule traverse le champ en 2 a 4 secondes. Sa plaque n'est nette
+# et de face que sur quelques images. On ne lit donc pas chaque image :
+# on suit le vehicule, on garde la MEILLEURE vue de sa plaque, et on ne
+# lance l'OCR qu'une fois, a sa sortie du champ.
+selection:
+  actif: true
+  images_max_par_vehicule: 40
+  # Score = largeur de plaque x nettete. Les deux comptent : une grande
+  # plaque floue est aussi illisible qu'une petite plaque nette.
+
+# --- Format marocain ---
+# Structure : chiffres | lettre arabe | numero de region
+# Exemple : 12345 - a - 6
+# Les modeles OCR publics sont entraines sur des plaques latines : ils
+# lisent les chiffres et ratent souvent la lettre arabe. Les chiffres
+# suffisent generalement a rapprocher un camion d'un bon de livraison.
+format:
+  verifier: true
+  chiffres_min: 4
+  chiffres_max: 6
+  # Plaques particulieres a ne pas rejeter
+  prefixes_speciaux: [WW, W, M]
+
+sorties:
+  dossier_plaques: runs/plaques
+  sauver_vignette: true      # image recadree de la plaque, pour verification
+  journal: runs/plaques/passages.jsonl

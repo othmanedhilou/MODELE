@@ -1,0 +1,20 @@
+# Dataset YOLO - Eclairage
+# Chemins relatifs a la racine du projet.
+# 'path' est reecrit en chemin absolu au lancement par
+# src/utils/common.py -> resoudre_data_yaml(). Ultralytics resout
+# sinon ce chemin depuis son dossier 'datasets_dir' global, qui
+# pointe souvent vers un autre projet.
+path: data/eclairage
+train: images/train
+val: images/val
+test: images/test
+
+# Mode par defaut (etat_par_modele: false) -> 1 seule classe
+names:
+  0: luminaire
+
+# Si vous passez a etat_par_modele: true, remplacez par :
+# names:
+#   0: lampe_allumee
+#   1: lampe_eteinte
+#   2: lampe_defaillante

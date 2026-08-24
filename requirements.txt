@@ -1,0 +1,26 @@
+# --- Coeur vision / deep learning ---
+ultralytics>=8.3.0
+torch>=2.4.0
+torchvision>=0.19.0
+opencv-python>=4.10.0
+numpy>=1.26.0
+PyYAML>=6.0
+
+# --- Utilitaires data / rapport ---
+pandas>=2.2.0
+matplotlib>=3.8.0
+tqdm>=4.66.0
+scikit-learn>=1.5.0
+
+# --- Lecture de plaque (module plaque) ---
+# Optionnel : sans moteur OCR, le module enregistre quand meme la vignette
+# de la plaque pour lecture par un operateur.
+easyocr>=1.7.0
+# Alternative plus legere, necessite le binaire tesseract installe a part :
+# pytesseract>=0.3.10
+
+# --- Optionnel : detection d'anomalie non supervisee (convoyeur, phase 2) ---
+# anomalib>=1.1.0
+
+# --- Optionnel : annotation locale ---
+# labelImg

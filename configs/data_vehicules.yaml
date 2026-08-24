@@ -1,0 +1,21 @@
+# Dataset YOLO - Vehicules cimenterie
+# 'path' est reecrit en chemin absolu au lancement par
+# src/utils/common.py -> resoudre_data_yaml(). Ultralytics resout
+# sinon ce chemin depuis son dossier 'datasets_dir' global, qui
+# pointe souvent vers un autre projet.
+path: data/vehicules
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: camion_benne          # camion de transport granulats / benne
+  1: camion_citerne        # citerne vrac ciment (le plus frequent en cimenterie)
+  2: camion_leger          # fourgon, utilitaire
+  3: voiture               # vehicule leger personnel
+  4: bus_navette           # transport de personnel
+  5: chargeuse             # chargeuse sur pneus (loader)
+  6: chariot_elevateur     # fenwick / forklift
+  7: bulldozer             # bouteur / engin a chenilles
+  8: excavatrice           # pelle mecanique
+  9: citerne_remorque      # remorque seule dedoublee, a l'arret sur le parc

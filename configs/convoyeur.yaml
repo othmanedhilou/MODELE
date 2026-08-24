@@ -1,0 +1,227 @@
+# =====================================================================
+# MODELE 3 : CONVOYEUR (bande transporteuse)
+# Objectif : detecter les anomalies de la bande, en priorite la DECHIRURE
+#            longitudinale, qui apparait comme une trace claire/blanche
+#            sur la bande noire.
+#
+# Choix d'architecture : approche HYBRIDE en 3 couches, parce que le
+# probleme classique de ce type de projet est toujours le meme : on n'a
+# quasiment aucune image de vraie dechirure au demarrage.
+#
+#   COUCHE A - Detecteur classique CV (src/detect/convoyeur_cv.py)
+#              ZERO donnee d'entrainement necessaire. Fonctionne des le
+#              premier jour. Seuillage adaptatif des pixels clairs sur la
+#              bande sombre + filtres de forme + persistance temporelle.
+#              Sert aussi a PRE-ANNOTER les images pour la couche B.
+#
+#   COUCHE B - YOLO segmentation (ce fichier) entraine sur les dechirures
+#              annotees. La segmentation est preferee a la boite car une
+#              dechirure est longue, fine et diagonale : une boite
+#              englobante contiendrait 90 pourcent de bande saine.
+#
+#   COUCHE C - (phase 2, optionnelle) anomalie non supervisee PatchCore
+#              entrainee UNIQUEMENT sur de la bande saine, pour attraper
+#              les defauts jamais vus. Voir docs/convoyeur_phase2.md
+# =====================================================================
+
+nom: convoyeur
+tache: segment
+modele_base: yolo11s-seg.pt
+data_yaml: configs/data_convoyeur.yaml
+
+entrainement:
+  epochs: 200                 # peu d'images -> plus d'epochs, avec patience
+  imgsz: 1024                 # defaut fin -> haute resolution indispensable
+  batch: 4
+  patience: 50
+  optimizer: AdamW
+  lr0: 0.001
+  cos_lr: true
+  seed: 42
+  workers: 4
+
+augmentation:
+  # La bande defile toujours dans le meme sens et la camera est fixe :
+  # on augmente surtout en luminosite et bruit, pas en geometrie.
+  hsv_h: 0.0                  # bande noire -> la teinte n'apporte rien
+  hsv_s: 0.2
+  hsv_v: 0.5                  # fort : l'eclairage du tunnel varie beaucoup
+  degrees: 3.0
+  translate: 0.15
+  scale: 0.3
+  shear: 2.0
+  fliplr: 0.5
+  flipud: 0.5                 # le sens de defilement n'est pas discriminant
+  mosaic: 0.5
+  copy_paste: 0.3             # utile en segmentation avec peu d'instances
+
+inference:
+  conf: 0.25                  # bas : une fausse alerte coute moins cher
+  iou: 0.5
+
+# --- ROI : region de la bande dans l'image ---
+# Coordonnees normalisees. On n'analyse QUE la bande, pas les structures
+# metalliques autour (claires, donc generatrices de faux positifs).
+roi:
+  polygone: [[0.18, 0.10], [0.82, 0.10], [0.95, 0.95], [0.05, 0.95]]
+  auto_detection: true        # tente de trouver la bande sombre tout seul,
+                              # et n'utilise le polygone qu'en repli
+
+  # Sens de defilement de la bande DANS L'IMAGE, en degres :
+  #   90  = la bande monte/descend verticalement (cas le plus frequent)
+  #   0   = la bande defile horizontalement
+  #   auto = deduit de la forme de la bande (a n'utiliser que si la bande
+  #          est nettement plus longue que large dans le champ ; sinon
+  #          l'axe principal est ambigu et les rouleaux sont pris pour
+  #          des dechirures)
+  # C'est une propriete FIXE de l'installation : renseignez-la, ne la devinez pas.
+  sens_defilement_deg: 90
+
+# --- COUCHE A : detecteur classique (fonctionne sans entrainement) ---
+cv:
+  # Seuillage : un pixel est clair s'il depasse la mediane de la bande de
+  # k * ecart robuste (MAD). Adaptatif donc insensible a l'eclairage.
+  k_mad: 6.0
+  seuil_absolu_min: 45        # ecart minimal en niveaux de gris (anti-bruit)
+  clahe_clip: 2.0             # egalisation locale du contraste
+  clahe_grid: 8
+
+  # Filtres morphologiques
+  ouverture: 3                # supprime le bruit poivre et sel / poussiere
+  fermeture_longitudinale: 21 # reconnecte une dechirure en pointilles
+                              # (noyau vertical = sens de defilement)
+
+  # Filtres de forme d'un blob candidat
+  aire_min_px: 150
+  aire_max_ratio: 0.25        # au dela = probleme d'eclairage global
+  elongation_min: 3.5         # longueur/largeur : une dechirure est allongee
+  angle_max_deg: 35           # ecart max avec le sens de defilement
+
+  # Persistance temporelle : un vrai defaut revient a chaque tour de bande,
+  # une poussiere qui passe ne revient pas.
+  fenetre_frames: 12
+  detections_min: 5           # doit apparaitre dans au moins 5 frames sur 12
+
+  # --- Detection des anomalies SOMBRES ---
+  # Une perforation ne se voit pas comme une trace claire : le trou laisse
+  # apparaitre l'ombre ou la structure sous la bande, donc une tache plus
+  # SOMBRE que le caoutchouc. Chercher uniquement les zones claires revient
+  # a ignorer toute une famille d'anomalies.
+  detecter_sombre: true
+  k_mad_sombre: 5.0
+  seuil_absolu_min_sombre: 25    # la bande est deja sombre : marge plus faible
+  ouverture_sombre: 5            # les trous sont compacts, pas filiformes
+
+  # --- Suppression des structures fixes ---
+  # Depuis qu'on detecte aussi les defauts TRANSVERSAUX (fissures,
+  # jonctions), les traces de rouleaux deviennent des faux positifs : elles
+  # sont claires, allongees et perpendiculaires au defilement, exactement
+  # comme une fissure.
+  #
+  # Ce qui les distingue n'est pas leur forme mais leur MOUVEMENT : un
+  # rouleau reste au meme endroit d'une image a l'autre, un defaut defile
+  # avec la bande. On construit donc une carte des pixels qui sont clairs
+  # en permanence, et on les retire. Cela elimine du meme coup les rayures
+  # sur l'objectif et les reflets fixes de l'eclairage.
+  #
+  # Limite a connaitre : si la bande est a l'ARRET, un vrai defaut devient
+  # lui aussi fixe et finit par etre supprime. La carte n'est donc mise a
+  # jour que si du mouvement est detecte sur la bande.
+  suppression_structures:
+    actif: true
+    frames_apprentissage: 40     # avant cela, aucune suppression
+    seuil_frequence: 0.65        # pixel clair dans >65% des images = structure
+    inertie: 0.02                # vitesse d'adaptation de la carte
+
+  # --- Classification geometrique des candidats ---
+  # Sans modele entraine, le type d'anomalie est deduit de la forme et de
+  # l'orientation. C'est grossier mais operationnel des le premier jour ;
+  # la couche B (YOLO) affine ensuite.
+  classification:
+    elongation_compacte: 2.0     # en dessous : defaut compact (trou, objet)
+    angle_transversal_deg: 55    # au dela de cet ecart : defaut transversal
+    distance_bord_ratio: 0.12    # a moins de 12 % de la largeur du bord
+    aire_objet_min_px: 800       # au dela, un defaut clair compact est un objet
+
+  # --- Desalignement de la bande ---
+  # On suit la position du centre de la bande. Une derive durable signale
+  # un mauvais reglage des rouleaux, qui use les bords et finit par
+  # provoquer des dechirures : c'est une CAUSE, donc utile a detecter tot.
+  desalignement:
+    actif: true
+    frames_reference: 60         # etablissement de la position de reference
+    derive_max_ratio: 0.04       # 4 % de la largeur de bande
+
+  # Calibration pour convertir la longueur en mm (voir docs/calibration.md)
+  mm_par_pixel: 2.0
+
+gravite:
+  # Classement selon la longueur estimee du defaut, en millimetres.
+  # Ces seuils s'appliquent aux defauts allonges (dechirure, fissure).
+  mineure_mm: 50
+  majeure_mm: 200
+  critique_mm: 500            # au dela -> arret machine recommande
+
+# --- Gravite par type d'anomalie ---
+# TOUTE anomalie est detectee et journalisee. Ce tableau ne filtre rien :
+# il fixe seulement le niveau d'alarme, donc la reaction attendue.
+#
+# Sans cette graduation, une fissure naissante declencherait la meme alarme
+# qu'une bande en train de se dechirer. Les operateurs cesseraient de lire
+# les alertes en une semaine, et le systeme serait desactive : c'est le
+# mode d'echec le plus frequent des projets de detection industrielle.
+#
+#   plafond     : gravite maximale que cette classe peut atteindre
+#   plancher    : gravite minimale, meme pour un petit defaut
+#   action      : ce que l'operateur doit faire, inscrit dans l'alarme
+gravite_par_classe:
+  dechirure:
+    plafond: critique
+    plancher: majeure
+    action: "Arret machine si longueur > 500 mm. Inspection immediate."
+  jonction_defectueuse:
+    plafond: critique
+    plancher: majeure
+    action: "Jonction en cours d'ouverture. Arret et re-agrafage."
+  perforation:
+    plafond: majeure
+    plancher: mineure
+    action: "Inspecter au prochain arret. Surveiller l'agrandissement."
+  fissure:
+    plafond: majeure
+    plancher: info
+    action: "Consigner et suivre l'evolution. Pas d'arret immediat."
+  cloque:
+    plafond: majeure
+    plancher: mineure
+    action: "Decollement du revetement. Planifier une reparation."
+  corps_etranger:
+    plafond: majeure
+    plancher: mineure
+    action: "Retirer avant qu'il ne dechire la bande. CAUSE evitable."
+  desalignement:
+    plafond: majeure
+    plancher: mineure
+    action: "Regler les rouleaux. Cause d'usure des bords."
+  bord_effiloche:
+    plafond: mineure
+    plancher: info
+    action: "Surveiller. Souvent consecutif a un desalignement."
+  usure_surface:
+    plafond: mineure
+    plancher: info
+    action: "Consigner l'epaisseur. Planifier le remplacement."
+  deversement:
+    plafond: mineure
+    plancher: info
+    action: "Verifier le chargement en amont."
+
+# Toutes les classes sont journalisees. Ce seuil ne filtre QUE l'affichage
+# des alertes a l'operateur en temps reel : le journal, lui, garde tout,
+# ce qui permet le suivi d'evolution d'une fissure sur plusieurs semaines.
+seuil_alerte_operateur: mineure   # info | mineure | majeure | critique
+
+alarme:
+  cycles_avant_alarme: 2
+  intervalle_analyse_s: 0     # 0 = analyser chaque frame (defaut critique)
+  sauvegarder_snapshot: true

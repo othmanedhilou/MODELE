@@ -1,0 +1,35 @@
+# Dataset YOLO - Convoyeur
+#
+# TAXONOMIE COMPLETE DES ANOMALIES DE BANDE.
+# Toute anomalie est detectee. Aucune n'est ignoree. Ce qui varie d'une
+# classe a l'autre, c'est la GRAVITE de l'alarme, definie dans
+# configs/convoyeur.yaml, section 'gravite_par_classe'.
+#
+# Les identifiants 0 a 5 sont figes : les changer invaliderait les datasets
+# deja annotes. Les nouvelles classes sont ajoutees a la suite.
+
+# 'path' est reecrit en chemin absolu au lancement par
+# src/utils/common.py -> resoudre_data_yaml(). Ultralytics resout
+# sinon ce chemin depuis son dossier 'datasets_dir' global, qui
+# pointe souvent vers un autre projet.
+path: data/convoyeur
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  # --- Ruptures de la bande ---
+  0: dechirure             # rupture ouverte, longitudinale : arret immediat
+  6: fissure               # amorce de rupture, souvent transversale
+  2: perforation           # trou traversant, ponctuel
+  8: jonction_defectueuse  # jonction (splice) qui s'ouvre : rupture imminente
+
+  # --- Degradations de surface et de structure ---
+  1: bord_effiloche        # bord de bande abime, frange
+  7: usure_surface         # abrasion, amincissement du revetement
+  9: cloque                # decollement, boursouflure, delamination
+
+  # --- Anomalies d'exploitation (causes ou consequences) ---
+  3: corps_etranger        # bloc metallique ou pierre : CAUSE des dechirures
+  4: deversement           # matiere hors bande, mauvais chargement
+  5: desalignement         # bande decentree sur les rouleaux

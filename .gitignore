@@ -1,0 +1,41 @@
+# Poids et sorties d'entrainement
+runs/
+*.pt
+*.onnx
+*.engine
+!configs/*.yaml
+
+# Registre MLOps : le JSON est versionne (c'est la tracabilite du projet),
+# les poids ne le sont pas (trop lourds pour un depot git).
+!models/registre.json
+models/**/*.pt
+
+# Datasets synthetiques : regenerables a l'identique avec --seed, donc
+# inutile de les versionner.
+data/convoyeur/images/
+data/convoyeur/labels/
+data/eclairage/images/
+data/eclairage/labels/
+
+# Donnees : jamais dans le depot (volume, et images du site industriel)
+data/raw/*
+data/frames/*
+data/*/images/
+data/*/labels/
+!data/**/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# Archive d'envoi : regeneree par scripts/preparer_envoi.py
+MODELE_envoi.zip
+
+# Systeme
+.DS_Store
+Thumbs.db
+desktop.ini

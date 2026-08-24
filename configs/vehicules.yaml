@@ -1,0 +1,77 @@
+# =====================================================================
+# MODELE 2 : VEHICULES
+# Objectif : detecter/suivre/compter les engins circulant dans l'usine,
+#            detecter les intrusions de zone et les vehicules a l'arret.
+#
+# Choix d'architecture :
+#   On part de yolo11s.pt pre-entraine COCO (qui connait deja car/truck/bus).
+#   Le fine-tuning sert a distinguer les engins specifiques cimenterie
+#   (chargeuse, chariot elevateur, camion citerne vrac...) que COCO confond.
+#   Le suivi (tracking) est fait par ByteTrack, pas besoin de l'entrainer.
+# =====================================================================
+
+nom: vehicules
+tache: detect
+modele_base: yolo11s.pt
+data_yaml: configs/data_vehicules.yaml
+
+entrainement:
+  epochs: 120
+  imgsz: 640                  # vehicules = gros objets, 640 suffit
+  batch: 16
+  patience: 30
+  optimizer: auto
+  lr0: 0.01
+  cos_lr: true
+  seed: 42
+  workers: 4
+
+augmentation:
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 0.0                # camera fixe -> pas de rotation
+  translate: 0.1
+  scale: 0.5
+  perspective: 0.0005
+  fliplr: 0.5
+  flipud: 0.0
+  mosaic: 1.0
+  close_mosaic: 10            # desactive la mosaique sur les 10 dernieres epochs
+  mixup: 0.1
+
+inference:
+  conf: 0.35
+  iou: 0.5
+  tracker: bytetrack.yaml     # ou botsort.yaml (plus robuste aux occlusions)
+
+# --- Lignes de comptage (entree/sortie site) ---
+# Coordonnees normalisees. Un vehicule est compte quand son centre traverse
+# le segment ; le sens est donne par le signe du produit vectoriel.
+lignes_comptage:
+  - nom: portail_principal
+    p1: [0.10, 0.62]
+    p2: [0.90, 0.62]
+    sens_positif: entree      # traversee p1->p2 dans le sens positif
+
+# --- Zones interdites / surveillance ---
+zones:
+  - nom: zone_pietonne
+    polygone: [[0.02, 0.70], [0.35, 0.70], [0.35, 0.98], [0.02, 0.98]]
+    classes_interdites: [camion_benne, camion_citerne, chargeuse, bulldozer]
+    alarme_apres_s: 3
+  - nom: quai_dechargement
+    polygone: [[0.40, 0.45], [0.95, 0.45], [0.95, 0.90], [0.40, 0.90]]
+    classes_interdites: []
+    mesurer_temps_stationnement: true
+
+# --- Vehicule a l'arret / stationnement abusif ---
+stationnement:
+  actif: true
+  deplacement_max_px: 25      # deplacement du centre en dessous duquel = arret
+  duree_alarme_s: 300         # 5 min a l'arret dans une zone de circulation
+
+vitesse:
+  actif: false                # necessite une calibration (voir docs/calibration.md)
+  metres_par_pixel: 0.05      # a mesurer sur le terrain
+  vitesse_max_kmh: 20

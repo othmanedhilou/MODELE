@@ -1,0 +1,86 @@
+# =====================================================================
+# MODELE 1 : ECLAIRAGE
+# Objectif : verifier que l'eclairage de l'usine fonctionne.
+#   a) detecter chaque luminaire (projecteur, lampadaire, hublot mural)
+#   b) determiner son etat : allume / eteint / defaillant (clignotant, faible)
+#   c) mesurer le niveau d'eclairement global par zone (sous-eclairage)
+#
+# Choix d'architecture :
+#   Le YOLO ne detecte QU'UNE seule classe "luminaire". L'etat allume/eteint
+#   est deduit par photometrie (luminance de la boite) au lieu d'etre appris.
+#   Raison : un dataset 3 classes exigerait des centaines d'exemples de lampes
+#   en panne (rares). La photometrie donne un resultat fiable jour 1.
+#   -> si plus tard vous avez beaucoup de donnees, passez etat_par_modele: true
+#      et entrainez les 3 classes directement.
+# =====================================================================
+
+nom: eclairage
+tache: detect                 # detect | segment | classify
+modele_base: yolo11s.pt       # yolo11n=rapide, yolo11s=equilibre, yolo11m=precis
+data_yaml: configs/data_eclairage.yaml
+
+entrainement:
+  epochs: 150
+  imgsz: 960                  # luminaires = petits objets -> resolution elevee
+  batch: 8
+  patience: 40
+  optimizer: auto
+  lr0: 0.01
+  cos_lr: true
+  seed: 42
+  workers: 4
+
+augmentation:
+  # ATTENTION : ne PAS augmenter fortement la luminosite/contraste,
+  # sinon le modele n'apprend plus la difference allume/eteint.
+  hsv_h: 0.015
+  hsv_s: 0.4
+  hsv_v: 0.15                 # volontairement faible (defaut ultralytics = 0.4)
+  degrees: 5.0
+  translate: 0.1
+  scale: 0.4
+  fliplr: 0.5
+  flipud: 0.0
+  mosaic: 1.0
+  mixup: 0.0
+
+# --- Post-traitement photometrique (module src/detect/eclairage.py) ---
+etat_par_modele: false        # true = le YOLO predit lui-meme allume/eteint
+
+photometrie:
+  # Un luminaire est "allume" si la luminance moyenne de sa boite depasse
+  # seuil_allume, ET depasse la luminance mediane de la scene d'au moins delta.
+  seuil_allume: 170           # 0-255, canal V (HSV)
+  delta_vs_scene: 45          # ecart minimal avec le fond
+  seuil_faible: 120           # entre seuil_faible et seuil_allume -> "faible"
+  # Hysteresis temporelle : evite le clignotement du diagnostic
+  fenetre_frames: 15          # nb de frames memorisees par luminaire
+  ratio_confirmation: 0.7     # 70% des frames doivent etre d'accord
+  # Un luminaire qui alterne allume/eteint sur la fenetre -> "defaillant"
+  seuil_clignotement: 0.25    # taux de basculement au dela duquel = defaillant
+
+# --- Niveau d'eclairement par zone ---
+# Coordonnees normalisees (0-1) du polygone de la zone dans l'image.
+# Adaptez apres avoir vu vos images reelles (utilisez scripts/tracer_roi.py).
+zones:
+  - nom: quai_chargement
+    polygone: [[0.05, 0.55], [0.55, 0.55], [0.55, 0.98], [0.05, 0.98]]
+    luminance_min: 60         # en dessous -> alarme "eclairage insuffisant"
+    actif_la_nuit_seulement: true
+  - nom: voie_circulation
+    polygone: [[0.55, 0.50], [0.98, 0.50], [0.98, 0.98], [0.55, 0.98]]
+    luminance_min: 50
+    actif_la_nuit_seulement: true
+
+# Detection jour/nuit (evite de crier "panne" en plein soleil)
+jour_nuit:
+  seuil_luminance_nuit: 85    # luminance mediane de l'image entiere
+  # ou forcer par horaire si la camera n'est pas fiable :
+  utiliser_horaire: false
+  heure_nuit_debut: 19
+  heure_nuit_fin: 6
+
+alarme:
+  # Nb de cycles consecutifs en defaut avant d'emettre l'alarme
+  cycles_avant_alarme: 3
+  intervalle_analyse_s: 60    # l'eclairage n'a pas besoin d'etre analyse a 25 fps

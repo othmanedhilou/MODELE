@@ -1,0 +1,216 @@
+{
+  "experiences": [
+    {
+      "modele": "convoyeur",
+      "version": "v1",
+      "date": "2026-08-21T16:27:09",
+      "dataset": {
+        "empreinte": "3ef9715e9234edc5",
+        "images": 600,
+        "instances": 733,
+        "par_lot": {
+          "train": 420,
+          "val": 120,
+          "test": 60
+        },
+        "par_classe": {
+          "dechirure": 527,
+          "corps_etranger": 113,
+          "perforation": 93
+        }
+      },
+      "modele_base": "yolo11n-seg.pt",
+      "hyperparametres": {
+        "epochs": 3,
+        "imgsz": 320,
+        "batch": 2,
+        "lr0": 0.001,
+        "optimizer": "AdamW",
+        "patience": 0,
+        "mosaic": 0.5,
+        "hsv_v": 0.5,
+        "copy_paste": 0.3,
+        "degrees": 3.0,
+        "scale": 0.3
+      },
+      "metriques": {
+        "epoch": 2.0,
+        "time": 652.531,
+        "train/box_loss": 1.8032,
+        "train/seg_loss": 0.9593,
+        "train/cls_loss": 1.6286,
+        "train/dfl_loss": 1.1583,
+        "train/sem_loss": 0.0,
+        "metrics/precision(B)": 0.4114,
+        "metrics/recall(B)": 0.609,
+        "metrics/mAP50(B)": 0.5436,
+        "metrics/mAP50-95(B)": 0.2937,
+        "metrics/precision(M)": 0.4094,
+        "metrics/recall(M)": 0.5926,
+        "metrics/mAP50(M)": 0.5645,
+        "metrics/mAP50-95(M)": 0.2931,
+        "val/box_loss": 1.646,
+        "val/seg_loss": 0.688,
+        "val/cls_loss": 1.5816,
+        "val/dfl_loss": 1.2268,
+        "val/sem_loss": 0.0,
+        "lr/pg0": 0.0005,
+        "lr/pg1": 0.0005,
+        "lr/pg2": 0.034
+      },
+      "poids": "runs\\convoyeur\\train\\weights\\best.pt",
+      "evaluations": {
+        "test": {
+          "date": "2026-08-21T16:33:57",
+          "global": {
+            "mAP50": 0.6127,
+            "mAP50-95": 0.3427,
+            "precision": 0.5297,
+            "rappel": 0.5987
+          },
+          "par_classe": {
+            "dechirure": {
+              "mAP50": 0.8692,
+              "precision": 0.6988,
+              "rappel": 0.8545
+            },
+            "perforation": {
+              "mAP50": 0.1825,
+              "precision": 0.1927,
+              "rappel": 0.1667
+            },
+            "corps_etranger": {
+              "mAP50": 0.7864,
+              "precision": 0.6976,
+              "rappel": 0.7748
+            }
+          }
+        }
+      }
+    },
+    {
+      "modele": "eclairage",
+      "version": "v1",
+      "date": "2026-08-24T05:21:09",
+      "dataset": {
+        "empreinte": "521537819697973c",
+        "images": 600,
+        "instances": 2945,
+        "par_lot": {
+          "train": 420,
+          "val": 120,
+          "test": 60
+        },
+        "par_classe": {
+          "luminaire": 2945
+        }
+      },
+      "modele_base": "",
+      "hyperparametres": {
+        "epochs": 3,
+        "imgsz": 320,
+        "batch": 2,
+        "lr0": 0.01,
+        "optimizer": "auto",
+        "patience": 0,
+        "mosaic": 1.0,
+        "hsv_v": 0.15,
+        "degrees": 5.0,
+        "scale": 0.4
+      },
+      "metriques": {
+        "metrics/precision(B)": 0.9271,
+        "metrics/recall(B)": 0.8797,
+        "metrics/mAP50(B)": 0.9022,
+        "metrics/mAP50-95(B)": 0.5588,
+        "fitness": 0.5588
+      },
+      "poids": "runs\\eclairage\\train\\weights\\best.pt",
+      "evaluations": {
+        "test": {
+          "date": "2026-08-24T05:21:29",
+          "global": {
+            "mAP50": 0.9311,
+            "mAP50-95": 0.5889,
+            "precision": 0.9601,
+            "rappel": 0.9046
+          },
+          "par_classe": {
+            "luminaire": {
+              "mAP50": 0.9311,
+              "precision": 0.9601,
+              "rappel": 0.9046
+            }
+          }
+        }
+      }
+    },
+    {
+      "modele": "convoyeur",
+      "version": "v2",
+      "date": "2026-08-24T08:50:58",
+      "dataset": {
+        "empreinte": "06ab5d1675c5f706",
+        "images": 600,
+        "instances": 1445,
+        "par_lot": {
+          "train": 420,
+          "val": 120,
+          "test": 60
+        },
+        "par_classe": {
+          "fissure": 140,
+          "dechirure": 463,
+          "bord_effiloche": 152,
+          "cloque": 116,
+          "jonction_defectueuse": 136,
+          "deversement": 127,
+          "perforation": 142,
+          "usure_surface": 80,
+          "corps_etranger": 89
+        }
+      },
+      "modele_base": "",
+      "hyperparametres": {
+        "epochs": 3,
+        "imgsz": 320,
+        "batch": 2,
+        "lr0": 0.001,
+        "optimizer": "AdamW",
+        "patience": 0,
+        "mosaic": 0.5,
+        "hsv_v": 0.5,
+        "copy_paste": 0.3,
+        "degrees": 3.0,
+        "scale": 0.3
+      },
+      "metriques": {
+        "metrics/precision(B)": 0.4639,
+        "metrics/recall(B)": 0.4096,
+        "metrics/mAP50(B)": 0.3665,
+        "metrics/mAP50-95(B)": 0.217,
+        "metrics/precision(M)": 0.4579,
+        "metrics/recall(M)": 0.4094,
+        "metrics/mAP50(M)": 0.3671,
+        "metrics/mAP50-95(M)": 0.2308,
+        "fitness": 0.4478
+      },
+      "poids": "runs\\convoyeur\\train\\weights\\best.pt"
+    }
+  ],
+  "production": {
+    "eclairage": {
+      "version": "v1",
+      "promu_le": "2026-08-24T05:21:39",
+      "empreinte_dataset": "521537819697973c",
+      "metriques": {
+        "metrics/precision(B)": 0.9271,
+        "metrics/recall(B)": 0.8797,
+        "metrics/mAP50(B)": 0.9022,
+        "metrics/mAP50-95(B)": 0.5588,
+        "fitness": 0.5588
+      },
+      "poids": "models\\eclairage\\production.pt"
+    }
+  }
+}
